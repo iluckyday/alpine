@@ -5,33 +5,44 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
-dev=""
 mount_dir=/mnt/alpine
 
-set_hostname="$1"
-set_address="$2"
-set_netmask="$3"
-set_gateway="$4"
+dev="$1"
+[[ ! -n "$dev" || -b "$dev" ]] && echo /dev/xxx must be set. && exit 2
+
+set_hostname="$2"
+set_address="$3"
+set_netmask="$4"
+set_gateway="$5"
 
 public_ip=$(wget --no-check-certificate -4 -qO- http://ifconfig.co)
 auto_hostname="alpine-""${public_ip//./-}"
+[[ -n "$set_hostname" ]] && use_hostname=$set_hostname || use_hostname=$auto_hostname
+[[ -z "$set_address" ]] && ip_msg="DHCP" || ip_msg=$set_address
+[[ -z "$set_netmask" ]] && nm_msg="DHCP" || nm_msg=$set_netmask
+[[ -z "$set_gateway" ]] && gw_msg="DHCP" || gw_msg=$set_gateway
 
-if [ -b /dev/vda ]
-then
-	dev=/dev/vda
-elif [ -b /dev/sda ]
-then
-	dev=/dev/sda
-else
-	echo /dev/vda or /dev/sda not exist.
-	exit 2
-fi
 
 echo
 echo =====================================
 echo Install Alpine Linux edge to $dev.
 echo =====================================
 echo
+echo "hostname: ""$use_hostname"
+echo "address: ""$ip_msg"
+echo "netmask: ""$nm_msg"
+echo "gateway: ""$gw_msg"
+
+read -r -p "Are You Sure? [Y/n] " input
+case $input in
+		[yY][eE][sS]|[yY])
+		echo "GoGoGo ..."
+	;;
+	*)
+		echo "Error ..."
+		exit 3
+	;;
+esac
 
 echo Format $dev ...
 mkfs.ext4 -L alpine-root -b 1024 -I 128 -O "^has_journal" $dev
@@ -102,7 +113,7 @@ mount -o remount,ro,bind ${mount_dir}/dev
 mount -t proc none ${mount_dir}/proc
 mount -o bind /sys ${mount_dir}/sys
 
-[[ -n "$set_hostname" ]] && echo "$set_hostname" > ${mount_dir}/etc/hostname || echo "$auto_hostname" > ${mount_dir}/etc/hostname
+echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
 echo tcp_bbr >> ${mount_dir}/etc/modules
 echo -e "http://dl-cdn.alpinelinux.org/alpine/edge/main\nhttp://dl-cdn.alpinelinux.org/alpine/edge/community\nhttp://dl-cdn.alpinelinux.org/alpine/edge/testing" > ${mount_dir}/etc/apk/repositories
