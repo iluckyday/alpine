@@ -212,8 +212,8 @@ echo root:Alpine#123 | chpasswd
 #apk update
 #apk add linux-virt
 #dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
-#extlinux -i /boot
-#update-extlinux
+extlinux -i /boot
+update-extlinux
 
 rc-update add devfs sysinit
 rc-update add hwdrivers sysinit
