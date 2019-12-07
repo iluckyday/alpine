@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 if [[ $EUID -ne 0 ]]; then
 	echo "This script must be run as root" 1>&2
@@ -10,15 +10,18 @@ command_exists()
 	command -v "$1" >/dev/null 2>&1
 }
 
-if ! command_exists wget; then
-	echo 'Your system does not have wget'
-	exit 2
-fi
+for cmd in wget unzip
+do
+	if ! command_exists $cmd; then
+		echo Your system does not have $cmd, install it first.
+		exit 2
+	fi
+done
 
 mount_dir=/mnt/alpine
 
 dev="$1"
-[[ ! -n "$dev" || -b "$dev" ]] && echo /dev/xxx must be set. && exit 2
+[[ ! -b "$dev" ]] && echo disk $dev must be a block device,like /dev/vda. && exit 2
 
 set_hostname="$2"
 set_address="$3"
@@ -43,7 +46,9 @@ echo "address: ""$ip_msg"
 echo "netmask: ""$nm_msg"
 echo "gateway: ""$gw_msg"
 
-read -r -p "Are You Sure? [Y/n] " input
+DEFAULT="y"
+read -e -p "Are You Sure? [Y/n] " input
+input="${input:-${DEFAULT}}"
 case $input in
 		[yY][eE][sS]|[yY])
 		echo "GoGoGo ..."
@@ -55,7 +60,7 @@ case $input in
 esac
 
 echo Format $dev ...
-mkfs.ext4 -L alpine-root -b 1024 -I 128 -O "^has_journal" $dev
+mkfs.ext4 -F -L alpine-root -b 1024 -I 128 -O "^has_journal" $dev >/dev/null 2>&1
 
 echo Mount $dev to ${mount_dir} ...
 mkdir -p ${mount_dir}
@@ -66,7 +71,7 @@ ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-sta
 wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux linux-virt dropbear
+/tmp/sbin/apk.static -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux linux-virt dropbear
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
