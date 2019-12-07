@@ -75,7 +75,7 @@ ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-sta
 wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux linux-virt dropbear
+/tmp/sbin/apk.static -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux dropbear
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -85,6 +85,7 @@ unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
 
 UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4)
+UUID=${UUID:(-1)}
 mkdir ${mount_dir}/etc/v2ray
 cat << EOF > ${mount_dir}/etc/v2ray/config.json
 {
@@ -138,7 +139,7 @@ echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
 echo tcp_bbr >> ${mount_dir}/etc/modules
 echo -e "http://dl-cdn.alpinelinux.org/alpine/edge/main\nhttp://dl-cdn.alpinelinux.org/alpine/edge/community\nhttp://dl-cdn.alpinelinux.org/alpine/edge/testing" > ${mount_dir}/etc/apk/repositories
 
-mkdir -p $(mount_dir)/root/.ssh
+mkdir -p ${mount_dir}/root/.ssh
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0uVU4ScS9bSJ+AGr25Dz96yBDTBDzVzIdAArJE0Uki" >> ${mount_dir}/root/.ssh/authorized_keys
 chmod 600 ${mount_dir}/root/.ssh/authorized_keys
 
@@ -209,9 +210,9 @@ EOF
 chroot ${mount_dir} /bin/sh -c '
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:Alpine#123 | chpasswd
-#apk update
-#apk add linux-virt
-#dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
+apk update
+apk add linux-virt
+dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
 extlinux -i /boot
 update-extlinux
 
