@@ -5,6 +5,16 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
+command_exists()
+{
+	command -v "$1" >/dev/null 2>&1
+}
+
+if ! command_exists wget; then
+	echo 'Your system does not have wget'
+	exit 2
+fi
+
 mount_dir=/mnt/alpine
 
 dev="$1"
