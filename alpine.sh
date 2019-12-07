@@ -14,7 +14,7 @@ for cmd in wget unzip
 do
 	if ! command_exists $cmd; then
 		echo Your system does not have $cmd, install it first.
-		exit 2
+		apt update >/dev/null 2>&1 && apt install -y $cmd >/dev/null 2>&1
 	fi
 done
 
@@ -38,7 +38,7 @@ auto_hostname="alpine-""${public_ip//./-}"
 
 echo
 echo =====================================
-echo Install Alpine Linux edge to $dev.
+echo Install Alpine Linux edge to $dev
 echo =====================================
 echo
 echo "hostname: ""$use_hostname"
@@ -60,10 +60,14 @@ case $input in
 esac
 
 echo Format $dev ...
+mkdir -p ${mount_dir}
+if mountpoint ${mount_dir}; then
+	umount ${mount_dir}
+fi
+
 mkfs.ext4 -F -L alpine-root -b 1024 -I 128 -O "^has_journal" $dev >/dev/null 2>&1
 
 echo Mount $dev to ${mount_dir} ...
-mkdir -p ${mount_dir}
 mount $dev ${mount_dir}
 
 echo Download apk-tools-static ...
