@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 if [[ $EUID -ne 0 ]]; then
 	echo "This script must be run as root" 1>&2
@@ -61,7 +61,7 @@ esac
 
 echo Format $dev ...
 mkdir -p ${mount_dir}
-if mountpoint ${mount_dir}; then
+if mountpoint ${mount_dir} >/dev/null; then
 	umount ${mount_dir}
 fi
 
