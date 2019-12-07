@@ -37,7 +37,6 @@ auto_hostname="alpine-""${live_ip//./-}"
 [[ -z "$set_gateway" ]] && gw_msg="DHCP" || gw_msg=$set_gateway
 
 
-echo
 echo =====================================
 echo Install Alpine Linux edge to $dev
 echo =====================================
@@ -130,11 +129,11 @@ EOF
 chmod +x ${mount_dir}/etc/init.d/v2ray
 
 echo Config system ...
-#mount /dev ${mount_dir}/dev --bind
-#mount -o remount,ro,bind ${mount_dir}/dev
+mount /dev ${mount_dir}/dev --bind
+mount -o remount,ro,bind ${mount_dir}/dev
 
-#mount -t proc none ${mount_dir}/proc
-#mount -o bind /sys ${mount_dir}/sys
+mount -t proc none ${mount_dir}/proc
+mount -o bind /sys ${mount_dir}/sys
 
 echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
@@ -234,8 +233,12 @@ rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 "
 
+umount ${mount_dir}/dev ${mount_dir}/proc ${mount_dir}/sys
+sleep 1
 umount ${mount_dir}
 
-echo Done
-echo root password:$rootpwd
-echo V2ray UUID is:$UUID
+echo Done.
+echo =============================================
+echo Root password: $rootpwd
+echo V2ray UUID is: $UUID
+echo =============================================
