@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 if [[ $EUID -ne 0 ]]; then
 	echo "This script must be run as root" 1>&2
@@ -27,9 +27,10 @@ set_hostname="$2"
 set_address="$3"
 set_netmask="$4"
 set_gateway="$5"
+rootpwd=$(openssl rand -base64 27)
 
-public_ip=$(wget --no-check-certificate -4 -qO- http://ifconfig.co)
-auto_hostname="alpine-""${public_ip//./-}"
+live_ip=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
+auto_hostname="alpine-""${live_ip//./-}"
 [[ -n "$set_hostname" ]] && use_hostname=$set_hostname || use_hostname=$auto_hostname
 [[ -z "$set_address" ]] && ip_msg="DHCP" || ip_msg=$set_address
 [[ -z "$set_netmask" ]] && nm_msg="DHCP" || nm_msg=$set_netmask
@@ -84,7 +85,8 @@ wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
 unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
 
-UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4 | sed 's/[^0-9,.:A-Za-z]//g')
+UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4)
+#UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4 | sed 's/[^0-9A-Za-z-]//g')
 mkdir ${mount_dir}/etc/v2ray
 cat << EOF > ${mount_dir}/etc/v2ray/config.json
 {
@@ -128,11 +130,11 @@ EOF
 chmod +x ${mount_dir}/etc/init.d/v2ray
 
 echo Config system ...
-mount /dev ${mount_dir}/dev --bind
-mount -o remount,ro,bind ${mount_dir}/dev
+#mount /dev ${mount_dir}/dev --bind
+#mount -o remount,ro,bind ${mount_dir}/dev
 
-mount -t proc none ${mount_dir}/proc
-mount -o bind /sys ${mount_dir}/sys
+#mount -t proc none ${mount_dir}/proc
+#mount -o bind /sys ${mount_dir}/sys
 
 echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
@@ -155,22 +157,22 @@ EOF
 if [ -n "$set_address" -o -n "$set_netmask" -o -n "$set_gatway" ]
 then
 	cat << EOF > ${mount_dir}/etc/network/interfaces
-	auto lo
-	iface lo inet loopback
-	
-	auto eth0
-	iface eth0 inet static
-		address "$set_address"
-		netmask "$set_netmask"
-		gateway "$set_gatway"
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+	address "$set_address"
+	netmask "$set_netmask"
+	gateway "$set_gatway"
 EOF
 else
 	cat << EOF > ${mount_dir}/etc/network/interfaces
-	auto lo
-	iface lo inet loopback
-	
-	auto eth0
-	iface eth0 inet dhcp
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
 EOF
 fi
 
@@ -207,9 +209,9 @@ cat << EOF > ${mount_dir}/etc/conf.d/dropbear
 DROPBEAR_OPTS="-s -p 127.0.0.1"
 EOF
 
-chroot ${mount_dir} /bin/sh -c '
+chroot ${mount_dir} /bin/sh -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
-echo root:Alpine#123 | chpasswd
+echo root:$rootpwd | chpasswd
 apk update
 apk add linux-virt
 #dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
@@ -230,8 +232,10 @@ rc-update add dropbear boot
 rc-update add v2ray boot
 rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
-'
+"
 
 umount ${mount_dir}
 
 echo Done
+echo root password:$rootpwd
+echo V2ray UUID is:$UUID
