@@ -84,8 +84,7 @@ wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
 unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
 
-UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4)
-UUID=${UUID:(-1)}
+UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4 | sed 's/[^0-9,.:A-Za-z]//g')
 mkdir ${mount_dir}/etc/v2ray
 cat << EOF > ${mount_dir}/etc/v2ray/config.json
 {
@@ -126,6 +125,7 @@ depend() {
 	after firewall
 }
 EOF
+chmod +x ${mount_dir}/etc/init.d/v2ray
 
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind
@@ -163,7 +163,7 @@ then
 		address "$set_address"
 		netmask "$set_netmask"
 		gateway "$set_gatway"
-	EOF
+EOF
 else
 	cat << EOF > ${mount_dir}/etc/network/interfaces
 	auto lo
@@ -171,7 +171,7 @@ else
 	
 	auto eth0
 	iface eth0 inet dhcp
-	EOF
+EOF
 fi
 
 cat << EOF > ${mount_dir}/etc/fstab
@@ -226,7 +226,8 @@ rc-update add bootmisc boot
 rc-update add syslog boot
 rc-update add networking boot
 rc-update add urandom boot
-rc-update add dropbear
+rc-update add dropbear boot
+rc-update add v2ray boot
 rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 '
