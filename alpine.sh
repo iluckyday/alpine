@@ -211,11 +211,9 @@ EOF
 chroot ${mount_dir} /bin/sh -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
+dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
 apk update
 apk add linux-virt
-#dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
-#extlinux -i /boot
-#update-extlinux
 
 rc-update add devfs sysinit
 rc-update add hwdrivers sysinit
@@ -227,8 +225,8 @@ rc-update add bootmisc boot
 rc-update add syslog boot
 rc-update add networking boot
 rc-update add urandom boot
-rc-update add dropbear boot
-rc-update add v2ray boot
+rc-update add dropbear
+rc-update add v2ray
 rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 "
@@ -238,7 +236,7 @@ sleep 1
 umount ${mount_dir}
 
 echo Done.
-echo =============================================
+echo ===================================================
 echo Root password: $rootpwd
 echo V2ray UUID is: $UUID
-echo =============================================
+echo ===================================================
