@@ -39,12 +39,11 @@ auto_hostname="alpine-""${live_ip//./-}"
 
 echo =====================================
 echo Install Alpine Linux edge to $dev
-echo =====================================
-echo
 echo "hostname: ""$use_hostname"
 echo "address: ""$ip_msg"
 echo "netmask: ""$nm_msg"
 echo "gateway: ""$gw_msg"
+echo =====================================
 
 DEFAULT="y"
 read -e -p "Are You Sure? [Y/n] " input
@@ -72,14 +71,14 @@ mount $dev ${mount_dir}
 
 echo Download apk-tools-static ...
 ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-static | awk -F'>' '/Flagged:/ {sub(/<\/a/,"",$2);print$2}')
-wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
+wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static --update --no-cache -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
+/tmp/sbin/apk.static --update --no-cache x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
-URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-64.zip
+URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-32.zip
 wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
 unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
@@ -203,10 +202,11 @@ root=LABEL=alpine-root
 verbose=0
 timeout=0
 hidden=0
+default=virt
 EOF
 
 cat << EOF > ${mount_dir}/etc/conf.d/dropbear
-DROPBEAR_OPTS="-s -p 127.0.0.1"
+DROPBEAR_OPTS="-s -p 127.0.0.1:22"
 EOF
 
 chroot ${mount_dir} /bin/sh -c "
