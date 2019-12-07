@@ -154,7 +154,7 @@ EOF
 
 if [ -n "$set_address" -o -n "$set_netmask" -o -n "$set_gatway" ]
 then
-	cat << EOF > ${mount_dir}/etc/network/interfaces
+	cat << -EOF > ${mount_dir}/etc/network/interfaces
 	auto lo
 	iface lo inet loopback
 	
@@ -163,15 +163,15 @@ then
 		address "$set_address"
 		netmask "$set_netmask"
 		gateway "$set_gatway"
-EOF
+	EOF
 else
-	cat << EOF > ${mount_dir}/etc/network/interfaces
+	cat << -EOF > ${mount_dir}/etc/network/interfaces
 	auto lo
 	iface lo inet loopback
 	
 	auto eth0
 	iface eth0 inet dhcp
-EOF
+	EOF
 fi
 
 cat << EOF > ${mount_dir}/etc/fstab
