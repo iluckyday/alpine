@@ -13,7 +13,7 @@ command_exists()
 for cmd in wget unzip
 do
 	if ! command_exists $cmd; then
-		echo Your system does not have $cmd, install it first.
+		echo Your system does not have $cmd, install it first, please wait.
 		apt update >/dev/null 2>&1 && apt install -y $cmd >/dev/null 2>&1
 	fi
 done
@@ -139,6 +139,8 @@ echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
 echo tcp_bbr >> ${mount_dir}/etc/modules
 echo -e "http://dl-cdn.alpinelinux.org/alpine/edge/main\nhttp://dl-cdn.alpinelinux.org/alpine/edge/community\nhttp://dl-cdn.alpinelinux.org/alpine/edge/testing" > ${mount_dir}/etc/apk/repositories
 
+rm -f ${mount_dir}/etc/sysctl.d/00-alpine.conf ${mount_dir}/etc/motd ${mount_dir}/etc/init.d/crond ${mount_dir}/etc/init.d/klogd ${mount_dir}/etc/init.d/syslog
+
 mkdir -p ${mount_dir}/root/.ssh
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0uVU4ScS9bSJ+AGr25Dz96yBDTBDzVzIdAArJE0Uki" >> ${mount_dir}/root/.ssh/authorized_keys
 chmod 600 ${mount_dir}/root/.ssh/authorized_keys
@@ -160,9 +162,9 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet static
-	address "$set_address"
-	netmask "$set_netmask"
-	gateway "$set_gatway"
+	address $set_address
+	netmask $set_netmask
+	gateway $set_gateway
 EOF
 else
 	cat << EOF > ${mount_dir}/etc/network/interfaces
@@ -213,17 +215,13 @@ echo root:$rootpwd | chpasswd
 apk add --update --no-cache syslinux linux-virt
 dd bs=440 count=1 conv=notrunc if=/usr/share/syslinux/mbr.bin of=$dev
 extlinux -i /boot
-update-extlinux
-
 
 rc-update add devfs sysinit
-rc-update add hwdrivers sysinit
 rc-update add mdev sysinit
 rc-update add modules boot
 rc-update add sysctl boot
 rc-update add hostname boot
 rc-update add bootmisc boot
-rc-update add syslog boot
 rc-update add networking boot
 rc-update add urandom boot
 rc-update add dropbear
