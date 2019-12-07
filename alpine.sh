@@ -80,7 +80,8 @@ echo Install alpine-base to ${mount_dir} ...
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
 URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-64.zip
-wget --no-check-certificate -q -O- $URL | unzip - -q -d ${mount_dir}/usr/sbin v2ray v2ctl
+wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
+unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
 
 UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4)
