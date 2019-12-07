@@ -75,7 +75,7 @@ ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-sta
 wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static --update --no-cache -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux dropbear
+/tmp/sbin/apk.static --update --no-cache -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -210,8 +210,11 @@ EOF
 chroot ${mount_dir} /bin/sh -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
-dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
-apk add --update --no-cache linux-virt
+apk add --update --no-cache syslinux linux-virt
+dd bs=440 count=1 conv=notrunc if=/usr/share/syslinux/mbr.bin of=$dev
+extlinux -i /boot
+update-extlinux
+
 
 rc-update add devfs sysinit
 rc-update add hwdrivers sysinit
