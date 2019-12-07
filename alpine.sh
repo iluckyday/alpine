@@ -75,7 +75,7 @@ ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-sta
 wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux dropbear
+/tmp/sbin/apk.static --update --no-cache -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base syslinux dropbear
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -84,8 +84,7 @@ wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
 unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
 
-UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4)
-#UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4 | sed 's/[^0-9A-Za-z-]//g')
+UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4 | sed 's/[^0-9A-Za-z-]//g')
 mkdir ${mount_dir}/etc/v2ray
 cat << EOF > ${mount_dir}/etc/v2ray/config.json
 {
@@ -212,8 +211,7 @@ chroot ${mount_dir} /bin/sh -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
 dd bs=440 count=1 if=/usr/share/syslinux/mbr.bin of=/dev/sda
-apk update
-apk add linux-virt
+apk add --update --no-cache linux-virt
 
 rc-update add devfs sysinit
 rc-update add hwdrivers sysinit
