@@ -22,7 +22,7 @@ mount_dir=/mnt/alpine
 
 dev="$1"
 [[ ! -b "$dev" ]] && echo disk $dev must be a block device,like /dev/vda. && exit 2
-devsize=$(fdisk -l | grep $dev | awk '{sub(/,/,"",$4);print $3$4}')
+devsize=$(fdisk -l | grep $dev | awk '{sub(/,/,"",$4);print $3$4;exit}')
 
 
 set_hostname="$2"
@@ -41,7 +41,7 @@ auto_hostname="alpine-""${live_ip//./-}"
 
 echo ===========================
 echo Install Alpine Linux edge
-echo "harddisk: ""$dev""$devsize"
+echo "disk: ""$dev ""$devsize"
 echo "hostname: ""$use_hostname"
 echo "address: ""$ip_msg"
 echo "netmask: ""$nm_msg"
@@ -190,6 +190,11 @@ tty1::respawn:/sbin/getty 38400 tty1
 ::shutdown:/sbin/openrc shutdown
 EOF
 
+cat << EOF > ${mount_dir}/etc/profile.d/ash_history.sh
+export HISTSIZE=10
+unset HISTFILE
+EOF
+
 if [ -n "$set_address" -o -n "$set_netmask" -o -n "$set_gatway" ]
 then
 	cat << EOF > ${mount_dir}/etc/network/interfaces
@@ -233,7 +238,7 @@ EOF
 cat << EOF > ${mount_dir}/etc/update-extlinux.conf
 overwrite=1
 vesa_menu=0
-default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
+default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
 modules=ext4
 root=LABEL=alpine-root
 verbose=0
@@ -274,7 +279,7 @@ umount ${mount_dir}
 
 echo Done.
 echo ===================================================
-echo Root password: $rootpwd
-echo Ss   password: $rootpwd
-echo V2ray UUID is: $UUID
+echo "Root password: $rootpwd"
+echo "Ss password  : $sspwd"
+echo "V2ray UUID   : $UUID"
 echo ===================================================
