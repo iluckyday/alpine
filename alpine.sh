@@ -74,7 +74,7 @@ ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-sta
 wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static --update --no-cache x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
+/tmp/sbin/apk.static --update --no-cache --arch x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -95,7 +95,8 @@ cat << EOF > ${mount_dir}/etc/v2ray/config.json
     "protocol": "vmess",
     "settings": {
       "clients": [{
-        "id": "$UUID"
+        "id": "$UUID",
+        "alterId": 100
       }]
     },
     "streamSettings": {
@@ -141,7 +142,7 @@ echo -e "http://dl-cdn.alpinelinux.org/alpine/edge/main\nhttp://dl-cdn.alpinelin
 rm -f ${mount_dir}/etc/sysctl.d/00-alpine.conf ${mount_dir}/etc/motd ${mount_dir}/etc/init.d/crond ${mount_dir}/etc/init.d/klogd ${mount_dir}/etc/init.d/syslog
 
 mkdir -p ${mount_dir}/root/.ssh
-echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0uVU4ScS9bSJ+AGr25Dz96yBDTBDzVzIdAArJE0Uki" >> ${mount_dir}/root/.ssh/authorized_keys
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDGgRpNtXJb41ZIiZaWblqsH3dCNOiPTMUiQeSR8rPHnr79ugX+OTl+jihIEwoB+0MFQcRuRuxTY5/ceyfQke5sDiPBefU7FGSy2ATwLgbe8mAmgf3tn20GKHYBJNiI58bHx+q35G4r8sJg8aDCPC30JCTr8EBmUX9oVqHLLe69e20T/pE1YcoR7y8fJaimrapwmB22HHmWr/M9fb3BDhtvIwveRgxbnEJzVbtfbWNx6Dtzm/6XGBRKwe+tLdbE5+v1JWQwT9ItyfIgq1aH0FJUvv/d6EAS6thdtkyPoU7orqJhA72H/YmusMFxqzRns60Rxo3Ngnwd39p/kPv81aO9XNPW2ICEeItqE8L8Y6eXmSuK20aMpyY2XzzGNPzRp2pyNDX1pPmCdOqN0zAv4eAQaX5Yq2uZ5VFC2e0eAPR6bWePUHrkENNRjTlIDPMOl3mOJSmgGBu0N5EPvWUBqhPifHrJI9It95ru+UPvxWpA4fo0mU1uOWcqQVWNGH/8Ti5Sb424iK5P3OpivQOwzAJXvbrr47+qW3eOW11cHWj5VD899YWXkzASG646yYIa34zpw4kNzIhCLXI1lOnaxVOM7UuTi7P5gWFFAVmrCAFoOhh1tYYLDDbBjAHzHgTvU1L1WYGUlIK/BFnWh6wt/G8CV24ALPSyuVVOvbdIj2jOnQ==" >> ${mount_dir}/root/.ssh/authorized_keys
 chmod 600 ${mount_dir}/root/.ssh/authorized_keys
 
 cat << EOF > ${mount_dir}/etc/inittab
@@ -180,6 +181,37 @@ LABEL=alpine-root /    ext4  defaults,noatime                            0 0
 tmpfs             /tmp tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
 EOF
 
+cat << EOF >> ${mount_dir}/etc/modprobe.d/blacklist.conf
+#reduce kelnel memory usage, delete unuse driver
+blacklist ipv6
+blacklist psmouse
+blacklist mousedev
+blacklist floppy
+blacklist hid_generic
+blacklist usbhid
+blacklist hid
+blacklist sr_mod
+blacklist cdrom
+blacklist uhci_hcd
+blacklist ehci_pci
+blacklist ehci_hcd
+blacklist usbcore
+blacklist usb_common
+blacklist drm_kms_helper
+blacklist syscopyarea
+blacklist sysimgblt
+blacklist fs_sys_fops
+blacklist drm
+blacklist drm_panel_orientation_quirks
+blacklist firmware_class
+blacklist cfbfillrect
+blacklist cfbimgblt
+blacklist cfbcopyarea
+blacklist fb
+blacklist fbdev
+blacklist loop
+EOF
+
 cat << EOF > ${mount_dir}/etc/sysctl.d/10-tcp_bbr.conf
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
@@ -200,9 +232,9 @@ default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4"
 modules=ext4
 root=LABEL=alpine-root
 verbose=0
-timeout=0
+timeout=1
 hidden=0
-default=virt
+prompt=0
 EOF
 
 cat << EOF > ${mount_dir}/etc/conf.d/dropbear
@@ -218,6 +250,7 @@ extlinux -i /boot
 
 rc-update add devfs sysinit
 rc-update add mdev sysinit
+#rc-update add hwdrivers sysinit  need for e1000 driver load
 rc-update add modules boot
 rc-update add sysctl boot
 rc-update add hostname boot
