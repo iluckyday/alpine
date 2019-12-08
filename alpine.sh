@@ -22,6 +22,8 @@ mount_dir=/mnt/alpine
 
 dev="$1"
 [[ ! -b "$dev" ]] && echo disk $dev must be a block device,like /dev/vda. && exit 2
+devsize=$(fdisk -l | grep $dev | awk '{sub(/,/,"",$4);print $3$4}')
+
 
 set_hostname="$2"
 set_address="$3"
@@ -36,14 +38,14 @@ auto_hostname="alpine-""${live_ip//./-}"
 [[ -z "$set_netmask" ]] && nm_msg="DHCP" || nm_msg=$set_netmask
 [[ -z "$set_gateway" ]] && gw_msg="DHCP" || gw_msg=$set_gateway
 
-
-echo =====================================
-echo Install Alpine Linux edge to $dev
+echo ===========================
+echo Install Alpine Linux edge
+echo harddisk: ""$dev""$devsize"
 echo "hostname: ""$use_hostname"
 echo "address: ""$ip_msg"
 echo "netmask: ""$nm_msg"
 echo "gateway: ""$gw_msg"
-echo =====================================
+echo ===========================
 
 DEFAULT="y"
 read -e -p "Are You Sure? [Y/n] " input
@@ -83,7 +85,7 @@ wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
 unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
 
-UUID=$(wget --no-check-certificate -qO- https://www.uuidgenerator.net/api/version4 | sed 's/[^0-9A-Za-z-]//g')
+UUID=$(chroot ${mount_dir} /usr/sbin/v2ctl uuid)
 mkdir ${mount_dir}/etc/v2ray
 cat << EOF > ${mount_dir}/etc/v2ray/config.json
 {
@@ -91,8 +93,41 @@ cat << EOF > ${mount_dir}/etc/v2ray/config.json
     "loglevel": "none"
   },
   "inbounds": [{
-    "port": 9119,
+    "protocol": "shadowsocks",
+    "port": 7117,
+    "settings": {
+      "method": "aes-256-cfb",
+      "password": "!N0S3cr3t!",
+      "udp": false,
+      "ota": false
+      }
+  },
+  {
     "protocol": "vmess",
+    "port": 8118,
+    "settings": {
+      "clients": [{
+        "id": "$UUID",
+        "alterId": 100
+      }]
+    }
+  },
+  {
+    "protocol": "vmess",
+    "port": 8118,
+    "settings": {
+      "clients": [{
+        "id": "$UUID",
+        "alterId": 100
+      }]
+    },
+    "streamSettings": {
+      "network": "kcp"
+    }
+  },
+  {
+    "protocol": "vmess",
+    "port": 9119,
     "settings": {
       "clients": [{
         "id": "$UUID",
@@ -181,37 +216,6 @@ LABEL=alpine-root /    ext4  defaults,noatime                            0 0
 tmpfs             /tmp tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
 EOF
 
-cat << EOF >> ${mount_dir}/etc/modprobe.d/blacklist.conf
-#reduce kelnel memory usage, delete unuse driver
-blacklist ipv6
-blacklist psmouse
-blacklist mousedev
-blacklist floppy
-blacklist hid_generic
-blacklist usbhid
-blacklist hid
-blacklist sr_mod
-blacklist cdrom
-blacklist uhci_hcd
-blacklist ehci_pci
-blacklist ehci_hcd
-blacklist usbcore
-blacklist usb_common
-blacklist drm_kms_helper
-blacklist syscopyarea
-blacklist sysimgblt
-blacklist fs_sys_fops
-blacklist drm
-blacklist drm_panel_orientation_quirks
-blacklist firmware_class
-blacklist cfbfillrect
-blacklist cfbimgblt
-blacklist cfbcopyarea
-blacklist fb
-blacklist fbdev
-blacklist loop
-EOF
-
 cat << EOF > ${mount_dir}/etc/sysctl.d/10-tcp_bbr.conf
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
@@ -228,7 +232,7 @@ EOF
 cat << EOF > ${mount_dir}/etc/update-extlinux.conf
 overwrite=1
 vesa_menu=0
-default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4"
+default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
 modules=ext4
 root=LABEL=alpine-root
 verbose=0
@@ -250,7 +254,7 @@ extlinux -i /boot
 
 rc-update add devfs sysinit
 rc-update add mdev sysinit
-#rc-update add hwdrivers sysinit  need for e1000 driver load
+rc-update add hwdrivers sysinit  # need for e1000 driver load
 rc-update add modules boot
 rc-update add sysctl boot
 rc-update add hostname boot
