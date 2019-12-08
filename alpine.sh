@@ -40,7 +40,7 @@ auto_hostname="alpine-""${live_ip//./-}"
 
 echo ===========================
 echo Install Alpine Linux edge
-echo harddisk: ""$dev""$devsize"
+echo "harddisk: ""$dev""$devsize"
 echo "hostname: ""$use_hostname"
 echo "address: ""$ip_msg"
 echo "netmask: ""$nm_msg"
