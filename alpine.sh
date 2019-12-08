@@ -30,6 +30,7 @@ set_address="$3"
 set_netmask="$4"
 set_gateway="$5"
 rootpwd=$(openssl rand -base64 27)
+sspwd=$(openssl rand -base64 27)
 
 live_ip=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
 auto_hostname="alpine-""${live_ip//./-}"
@@ -97,7 +98,7 @@ cat << EOF > ${mount_dir}/etc/v2ray/config.json
     "port": 7117,
     "settings": {
       "method": "aes-256-cfb",
-      "password": "!N0S3cr3t!",
+      "password": "$sspwd",
       "udp": false,
       "ota": false
       }
@@ -274,5 +275,6 @@ umount ${mount_dir}
 echo Done.
 echo ===================================================
 echo Root password: $rootpwd
+echo Ss   password: $rootpwd
 echo V2ray UUID is: $UUID
 echo ===================================================
