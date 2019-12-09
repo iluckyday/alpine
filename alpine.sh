@@ -238,7 +238,7 @@ EOF
 cat << EOF > ${mount_dir}/etc/update-extlinux.conf
 overwrite=1
 vesa_menu=0
-default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
+default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
 modules=ext4
 root=LABEL=alpine-root
 verbose=0
