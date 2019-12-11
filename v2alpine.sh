@@ -166,7 +166,7 @@ tty1::respawn:/sbin/getty 38400 tty1
 EOF
 
 cat << EOF > ${mount_dir}/etc/caddy/caddy.conf
-$domain:9119 {
+$domain {
   tls $mail
   header / -Server
   proxy / 127.0.0.1:1024 {
