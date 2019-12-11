@@ -5,6 +5,12 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
+if [ $# -lt 3 ]
+then
+	echo "Atleast thress arguments needed: disk domain mail."
+	exit 1
+fi
+
 command_exists()
 {
 	command -v "$1" >/dev/null 2>&1
@@ -24,11 +30,13 @@ dev="$1"
 [[ ! -b "$dev" ]] && echo disk $dev must be a block device,like /dev/vda. && exit 2
 devsize=$(fdisk -l | grep $dev | awk '{sub(/,/,"",$4);print $3$4;exit}')
 
+domain=$2
+mail=$3
 
-set_hostname="$2"
-set_address="$3"
-set_netmask="$4"
-set_gateway="$5"
+set_hostname="$4"
+set_address="$5"
+set_netmask="$6"
+set_gateway="$7"
 rootpwd=$(openssl rand -base64 27)
 
 live_ip=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
@@ -76,7 +84,59 @@ ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-sta
 wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static --update --no-cache --arch x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
+/tmp/sbin/apk.static --update --no-cache --arch x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear caddy
+
+echo Install V2ray ...
+VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
+URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-32.zip
+wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
+unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
+chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
+
+UUID=$(cat /proc/sys/kernel/random/uuid)
+mkdir ${mount_dir}/etc/v2ray
+cat << EOF > ${mount_dir}/etc/v2ray/config.json
+{
+  "log": {
+    "loglevel": "none"
+  },
+  "inbounds": [  {
+    "port": 1024,
+    "listen": "127.0.0.1",
+    "protocol": "vmess",
+    "settings": {
+      "clients": [{
+        "id": "$UUID",
+        "alterId": 100
+      }]
+    },
+    "streamSettings": {
+      "network": "ws"
+    }
+  }],
+  "outbounds": [{
+    "protocol": "freedom",
+    "settings": {}
+  }]
+}
+EOF
+
+cat << EOF > ${mount_dir}/etc/init.d/v2ray
+#!/sbin/openrc-run
+
+name="V2Ray Server"
+command="/usr/sbin/v2ray"
+command_args="-config /etc/v2ray/config.json"
+command_background=yes
+command_user=nobody:nobody
+pidfile="/var/run/v2ray.pid"
+
+depend() {
+	need net localmount
+	after firewall
+}
+EOF
+chmod +x ${mount_dir}/etc/init.d/v2ray
 
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind
@@ -87,10 +147,14 @@ mount -o bind /sys ${mount_dir}/sys
 
 echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
-echo tcp_bbr >> ${mount_dir}/etc/modules
+echo "tcp_bbr" >> ${mount_dir}/etc/modules
 echo -e "http://dl-cdn.alpinelinux.org/alpine/edge/main\nhttp://dl-cdn.alpinelinux.org/alpine/edge/community\nhttp://dl-cdn.alpinelinux.org/alpine/edge/testing" > ${mount_dir}/etc/apk/repositories
 
 rm -f ${mount_dir}/etc/sysctl.d/00-alpine.conf ${mount_dir}/etc/motd ${mount_dir}/etc/init.d/crond ${mount_dir}/etc/init.d/klogd ${mount_dir}/etc/init.d/syslog
+
+mkdir -p ${mount_dir}/root/.ssh
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDGgRpNtXJb41ZIiZaWblqsH3dCNOiPTMUiQeSR8rPHnr79ugX+OTl+jihIEwoB+0MFQcRuRuxTY5/ceyfQke5sDiPBefU7FGSy2ATwLgbe8mAmgf3tn20GKHYBJNiI58bHx+q35G4r8sJg8aDCPC30JCTr8EBmUX9oVqHLLe69e20T/pE1YcoR7y8fJaimrapwmB22HHmWr/M9fb3BDhtvIwveRgxbnEJzVbtfbWNx6Dtzm/6XGBRKwe+tLdbE5+v1JWQwT9ItyfIgq1aH0FJUvv/d6EAS6thdtkyPoU7orqJhA72H/YmusMFxqzRns60Rxo3Ngnwd39p/kPv81aO9XNPW2ICEeItqE8L8Y6eXmSuK20aMpyY2XzzGNPzRp2pyNDX1pPmCdOqN0zAv4eAQaX5Yq2uZ5VFC2e0eAPR6bWePUHrkENNRjTlIDPMOl3mOJSmgGBu0N5EPvWUBqhPifHrJI9It95ru+UPvxWpA4fo0mU1uOWcqQVWNGH/8Ti5Sb424iK5P3OpivQOwzAJXvbrr47+qW3eOW11cHWj5VD899YWXkzASG646yYIa34zpw4kNzIhCLXI1lOnaxVOM7UuTi7P5gWFFAVmrCAFoOhh1tYYLDDbBjAHzHgTvU1L1WYGUlIK/BFnWh6wt/G8CV24ALPSyuVVOvbdIj2jOnQ==" >> ${mount_dir}/root/.ssh/authorized_keys
+chmod 600 ${mount_dir}/root/.ssh/authorized_keys
 
 cat << EOF > ${mount_dir}/etc/inittab
 ::sysinit:/sbin/openrc sysinit
@@ -99,6 +163,15 @@ cat << EOF > ${mount_dir}/etc/inittab
 tty1::respawn:/sbin/getty 38400 tty1
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/sbin/openrc shutdown
+EOF
+
+cat << EOF > ${mount_dir}/etc/caddy/caddy.conf
+$domain:9119 {
+  tls $mail
+  proxy / 127.0.0.1:1024 {
+    websocket
+  }
+}
 EOF
 
 cat << EOF > ${mount_dir}/etc/profile.d/ash_history.sh
@@ -158,6 +231,10 @@ hidden=0
 prompt=0
 EOF
 
+cat << EOF > ${mount_dir}/etc/conf.d/dropbear
+DROPBEAR_OPTS="-s -p 127.0.0.1:22"
+EOF
+
 chroot ${mount_dir} /bin/sh -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
@@ -167,7 +244,7 @@ extlinux -i /boot
 
 rc-update add devfs sysinit
 rc-update add mdev sysinit
-rc-update add hwdrivers sysinit
+rc-update add hwdrivers sysinit  # need for e1000 driver load
 rc-update add modules boot
 rc-update add sysctl boot
 rc-update add hostname boot
@@ -175,6 +252,8 @@ rc-update add bootmisc boot
 rc-update add networking boot
 rc-update add urandom boot
 rc-update add dropbear
+rc-update add caddy
+rc-update add v2ray
 rc-update add mount-ro shutdown
 rc-update add killprocs shutdown
 "
@@ -185,6 +264,6 @@ umount ${mount_dir}
 
 echo Done.
 echo ===================================================
-echo "SSH Server Available:"
 echo "Root password: $rootpwd"
+echo "V2ray UUID   : $UUID"
 echo ===================================================
