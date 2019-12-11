@@ -102,8 +102,7 @@ tty1::respawn:/sbin/getty 38400 tty1
 EOF
 
 cat << EOF > ${mount_dir}/etc/profile.d/ash_history.sh
-export HISTSIZE=10
-unset HISTFILE
+export HISTFILE=/dev/null
 EOF
 
 if [ -n "$set_address" -o -n "$set_netmask" -o -n "$set_gatway" ]
