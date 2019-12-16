@@ -74,6 +74,60 @@ mount $dev ${mount_dir}
 echo Install debian to ${mount_dir} ...
 /usr/sbin/debootstrap --no-check-gpg --exclude=unattended-upgrades,apparmor --include=bash-completion,iproute2,openssh-server,openssh-client sid /mnt/debian http://ftp.us.debian.org/debian
 
+echo Install V2ray ...
+VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
+URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-32.zip
+wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
+unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
+chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
+
+UUID=$(cat /proc/sys/kernel/random/uuid)
+mkdir ${mount_dir}/etc/v2ray
+cat << EOF > ${mount_dir}/etc/v2ray/config.json
+{
+  "log": {
+    "loglevel": "none"
+  },
+  "inbounds": [  {
+    "port": 1024,
+    "listen": "127.0.0.1",
+    "protocol": "vmess",
+    "settings": {
+      "clients": [{
+        "id": "$UUID",
+        "alterId": 100
+      }]
+    },
+    "streamSettings": {
+      "network": "ws"
+    }
+  }],
+  "outbounds": [{
+    "protocol": "freedom",
+    "settings": {}
+  }]
+}
+EOF
+
+cat << EOF > ${mount_dir}/etc/systemd/system/v2ray.service
+[Unit]
+Description=V2Ray Server
+ConditionFileNotEmpty=/etc/v2ray/config.json
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+ProtectHome=yes
+NoNewPrivileges=yes
+ExecStartPre=/usr/sbin/v2ray -config /etc/v2ray/config.json -test
+ExecStart=/usr/sbin/v2ray -config /etc/v2ray/config.json
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind
 mount -o remount,ro,bind ${mount_dir}/dev
@@ -158,7 +212,7 @@ sed -i 's/#\?\(PubkeyAuthentication\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_c
 sed -i 's/#\?\(PermitEmptyPasswords\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
 sed -i 's/#\?\(PasswordAuthentication\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
 
-mkdir -p ${mount_dir}/etc/systemd/system/sshd.socket.d/port.conf
+mkdir -p ${mount_dir}/etc/systemd/system/ssh.socket.d
 cat << EOF > ${mount_dir}/etc/systemd/system/ssh.socket.d/port.conf
 [Socket]
 ListenStream=
@@ -220,7 +274,7 @@ DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/
 grub-install --force $dev
 update-grub
 
-systemctl enable systemd-networkd ssh.socket
+systemctl enable systemd-networkd ssh.socket v2ray
 systemctl disable ssh.service
 systemctl -f mask apt-daily.timer apt-daily-upgrade.timer fstrim.timer motd-news.timer
 sleep 2
@@ -236,6 +290,6 @@ umount ${mount_dir}
 
 echo Done.
 echo ===================================================
-echo "SSH Server Available:"
 echo "Root password: $rootpwd"
+echo "V2ray UUID   : $UUID"
 echo ===================================================
