@@ -89,8 +89,7 @@ cat << EOF > ${mount_dir}/etc/v2ray/config.json
     "loglevel": "none"
   },
   "inbounds": [  {
-    "port": 1024,
-    "listen": "127.0.0.1",
+    "port": 9119,
     "protocol": "vmess",
     "settings": {
       "clients": [{
