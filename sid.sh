@@ -188,12 +188,14 @@ chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-apt update -y
-apt install -y -qq linux-image-cloud-amd64 extlinux
+mkdir /tmp/apt
+DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt update
+DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt install -y -qq linux-image-cloud-amd64 extlinux
 dd bs=440 count=1 conv=notrunc if=/usr/lib/EXTLINUX/mbr.bin of=$dev
 extlinux -i /boot
 
 systemctl enable systemd-networkd
+rm -rf /tmp/apt
 "
 
 umount ${mount_dir}/dev ${mount_dir}/proc ${mount_dir}/sys
