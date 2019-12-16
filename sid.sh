@@ -174,6 +174,15 @@ EOF
 
 #sed 's#^\(GRUB_CMDLINE_LINUX_DEFAULT="quiet\)"$#\1 ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"#' ${mount_dir}/etc/default/grub
 
+cat << EOF > ${mount_dir}/etc/default/grub
+GRUB_DEFAULT=0
+GRUB_HIDDEN_TIMEOUT_QUIET=false
+GRUB_TIMEOUT=3
+GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
+GRUB_CMDLINE_LINUX_DEFAULT="quiet ipv6.disable=1 module_blacklist=ipv6,nf_defrag_ipv6"
+GRUB_CMDLINE_LINUX="acpi_osi=Linux"
+EOF
+
 chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
@@ -181,14 +190,14 @@ ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 mkdir /tmp/apt
 DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt update
 DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt install -y -qq linux-image-cloud-amd64 grub2
-grub-install $dev
+grub-install --force $dev
 update-grub
 
 systemctl enable systemd-networkd
 rm -rf /tmp/apt
 "
 
-umount ${mount_dir}/dev ${mount_dir}/proc ${mount_dir}/sys
+umount ${mount_dir}/dev ${mount_dir}/proc ${mount_dir}/sys/fs/fuse/connections ${mount_dir}/sys
 sleep 1
 umount ${mount_dir}
 
