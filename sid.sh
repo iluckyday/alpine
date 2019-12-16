@@ -72,7 +72,7 @@ echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
 echo Install debian to ${mount_dir} ...
-/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades --include=bash-completion,iproute2 sid /mnt/debian http://ftp.us.debian.org/debian
+/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades,apparmor --include=bash-completion,iproute2 sid /mnt/debian http://ftp.us.debian.org/debian
 
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind
@@ -172,17 +172,7 @@ net.ipv4.icmp_ignore_bogus_error_responses=1
 net.ipv4.icmp_echo_ignore_all = 1
 EOF
 
-cat << EOF > ${mount_dir}/etc/update-extlinux.conf
-overwrite=1
-vesa_menu=0
-default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
-modules=ext4
-root=LABEL=debian-root
-verbose=0
-timeout=1
-hidden=0
-prompt=0
-EOF
+sed 's#^\(GRUB_CMDLINE_LINUX_DEFAULT="quiet\)"$#\1 ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"#' ${mount_dir}/etc/default/grub
 
 chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
@@ -190,7 +180,7 @@ echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 mkdir /tmp/apt
 DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt update
-DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt install -y -qq linux-image-cloud-amd64 extlinux
+DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt install -y -qq linux-image-cloud-amd64 grub2
 dd bs=440 count=1 conv=notrunc if=/usr/lib/EXTLINUX/mbr.bin of=$dev
 extlinux -i /boot
 
