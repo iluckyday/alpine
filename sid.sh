@@ -10,7 +10,7 @@ command_exists()
 	command -v "$1" >/dev/null 2>&1
 }
 
-for cmd in wget unzip debootstrap
+for cmd in debootstrap
 do
 	if ! command_exists $cmd; then
 		echo Your system does not have $cmd, install it first, please wait.
@@ -72,7 +72,7 @@ echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
 echo Install debian to ${mount_dir} ...
-/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades --include=bash-completion,iproute2,tzdata --variant=minbase sid /mnt/debian http://ftp.us.debian.org/debian
+/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades --include=bash-completion,iproute2 sid /mnt/debian http://ftp.us.debian.org/debian
 
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind
