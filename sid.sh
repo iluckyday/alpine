@@ -10,7 +10,7 @@ command_exists()
 	command -v "$1" >/dev/null 2>&1
 }
 
-for cmd in debootstrap
+for cmd in debootstrap unzip
 do
 	if ! command_exists $cmd; then
 		echo Your system does not have $cmd, install it first, please wait.
