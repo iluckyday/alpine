@@ -72,7 +72,7 @@ echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
 echo Install debian to ${mount_dir} ...
-/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades,apparmor --include=bash-completion,iproute2,openssh-server sid /mnt/debian http://ftp.us.debian.org/debian
+/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades --include=bash-completion,iproute2,openssh-server sid /mnt/debian http://ftp.us.debian.org/debian
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -276,11 +276,11 @@ update-grub
 
 systemctl enable systemd-networkd ssh.socket v2ray
 systemctl disable ssh.service
-systemctl -f mask apt-daily.timer apt-daily-upgrade.timer fstrim.timer motd-news.timer
+systemctl -f mask apt-daily.timer apt-daily-upgrade.timer fstrim.timer motd-news.timer apparmor.service cron.service e2scrub_reap.service networking.service rsyslog.service syslog.service e2scrub_all.timer logrotate.timer
 sleep 2
 rm -rf /tmp/apt /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /var/cache/apt/*
-find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type f -name "*.py[co]" -exec rm -rf {} \;
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type d -name __pycache__ -exec rm -rf {} \;
+find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type f -name \"*.py[co]\" -exec rm -rf {} \;
 find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en' -exec rm -rf {} \;
 "
 
