@@ -145,10 +145,6 @@ mount -o remount,ro,bind ${mount_dir}/dev
 mount -t proc none ${mount_dir}/proc
 mount -o bind /sys ${mount_dir}/sys
 
-fallocate -l 128M ${mount_dir}/swapfile
-chmod 600 ${mount_dir}/swapfile
-mkswap ${mount_dir}/swapfile
-
 echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
 echo "tcp_bbr" >> ${mount_dir}/etc/modules
@@ -208,8 +204,19 @@ fi
 cat << EOF > ${mount_dir}/etc/fstab
 LABEL=alpine-root /    ext4  defaults,noatime                            0 0
 tmpfs             /tmp tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
-/swapfile         none swap  defaults                                    0 0
 EOF
+
+totalk=$(awk '/^MemTotal:/{print $2}' /proc/meminfo)
+if (( "$totalk" < "102400" ))
+then
+	swapfile_size=`expr 2 \* 1024 \* $totalk`
+	fallocate -l $swapfile_size ${mount_dir}/swapfile
+	chmod 600 ${mount_dir}/swapfile
+	mkswap ${mount_dir}/swapfile
+	cat << EOF >> ${mount_dir}/etc/fstab
+/swapfile	 none swap  defaults				    0 0
+EOF
+fi
 
 cat << EOF > ${mount_dir}/etc/sysctl.d/10-tcp_bbr.conf
 net.core.default_qdisc = fq
