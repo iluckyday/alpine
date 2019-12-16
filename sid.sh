@@ -72,7 +72,7 @@ echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
 echo Install debian to ${mount_dir} ...
-/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades,apparmor --include=bash-completion,iproute2 sid /mnt/debian http://ftp.us.debian.org/debian
+/usr/sbin/debootstrap --no-check-gpg --exclude=unattended-upgrades,apparmor --include=bash-completion,iproute2,openssh-server,openssh-client sid /mnt/debian http://ftp.us.debian.org/debian
 
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind
@@ -116,8 +116,9 @@ EOF
 fi
 
 cat << EOF > ${mount_dir}/etc/fstab
-LABEL=debian-root /    ext4  defaults,noatime                            0 0
-tmpfs             /tmp tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
+LABEL=debian-root /        ext4  defaults,noatime                            0 0
+tmpfs             /tmp     tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
+tmpfs             /var/log tmpfs defaults,noatime                            0 0
 EOF
 
 mkdir -p ${mount_dir}/root/.ssh
@@ -152,6 +153,34 @@ cat << EOF > ${mount_dir}/etc/systemd/journald.conf.d/storage.conf
 Storage=volatile
 EOF
 
+sed -i 's/#\?\(PerminRootLogin\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_config
+sed -i 's/#\?\(PubkeyAuthentication\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_config
+sed -i 's/#\?\(PermitEmptyPasswords\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
+sed -i 's/#\?\(PasswordAuthentication\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
+
+mkdir -p ${mount_dir}/etc/systemd/system/sshd.socket.d/port.conf
+cat << EOF > ${mount_dir}/etc/systemd/system/ssh.socket.d/port.conf
+[Socket]
+ListenStream=
+ListenStream=127.0.0.1:22
+EOF
+
+mkdir -p ${mount_dir}/etc/systemd/system.conf.d
+cat << EOF > ${mount_dir}/etc/systemd/system.conf.d/python.conf
+[Manager]
+DefaultEnvironment=PYTHONDONTWRITEBYTECODE=1
+EOF
+
+cat << EOF > ${mount_dir}/etc/profile.d/python.sh
+export PYTHONDONTWRITEBYTECODE=1
+EOF
+
+cat << EOF > ${mount_dir}/etc/pip.conf
+[global]
+download-cache=/tmp
+cache-dir=/tmp
+EOF
+
 cat << EOF >> ${mount_dir}/root/.bashrc
 
 export HISTSIZE=1000
@@ -172,8 +201,6 @@ net.ipv4.icmp_ignore_bogus_error_responses=1
 net.ipv4.icmp_echo_ignore_all = 1
 EOF
 
-#sed 's#^\(GRUB_CMDLINE_LINUX_DEFAULT="quiet\)"$#\1 ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"#' ${mount_dir}/etc/default/grub
-
 cat << EOF > ${mount_dir}/etc/default/grub
 GRUB_DEFAULT=0
 GRUB_HIDDEN_TIMEOUT_QUIET=false
@@ -193,8 +220,14 @@ DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/
 grub-install --force $dev
 update-grub
 
-systemctl enable systemd-networkd
-rm -rf /tmp/apt
+systemctl enable systemd-networkd ssh.socket
+systemctl disable ssh.service
+systemctl -f mask apt-daily.timer apt-daily-upgrade.timer fstrim.timer motd-news.timer
+sleep 2
+rm -rf /tmp/apt /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /var/cache/apt/*
+find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type f -name "*.py[co]" -o -type d -name __pycache__ -exec rm -rf {} \;
+find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en' -exec rm -rf {} \;
+find /usr/share/zoneinfo -mindepth 1 -maxdepth 2 ! -name 'UTC' -a ! -name 'UCT' -a ! -name 'PRC' -a ! -name 'Asia' -a ! -name '*Shanghai' -exec rm -rf {} \;
 "
 
 umount ${mount_dir}/dev ${mount_dir}/proc ${mount_dir}/sys/fs/fuse/connections ${mount_dir}/sys
