@@ -5,6 +5,13 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
+hname=$(hostname)
+if [ "$hname" != "archiso" ]
+then
+	echo "This script must be run in archiso" 1>&2
+	exit 2
+fi
+
 command_exists()
 {
 	command -v "$1" >/dev/null 2>&1
@@ -18,12 +25,11 @@ do
 	fi
 done
 
-mount_dir=/mnt/debian
+mount_dir=/mnt/arch
 
 dev="$1"
 [[ ! -b "$dev" ]] && echo disk $dev must be a block device,like /dev/vda. && exit 2
 devsize=$(fdisk -l | grep $dev | awk '{sub(/,/,"",$4);print $3$4;exit}')
-
 
 set_hostname="$2"
 set_address="$3"
@@ -32,7 +38,7 @@ set_gateway="$5"
 rootpwd=$(openssl rand -base64 27)
 
 live_ip=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
-auto_hostname="debian-""${live_ip//./-}"
+auto_hostname="arch-""${live_ip//./-}"
 [[ -n "$set_hostname" ]] && use_hostname=$set_hostname || use_hostname=$auto_hostname
 [[ -z "$set_address" ]] && ip_msg="DHCP" || ip_msg=$set_address
 [[ -z "$set_netmask" ]] && nm_msg="DHCP" || nm_msg=$set_netmask
@@ -66,13 +72,16 @@ if mountpoint ${mount_dir} >/dev/null; then
 	umount ${mount_dir}
 fi
 
-mkfs.ext4 -F -L debian-root -b 1024 -I 128 -O "^has_journal" $dev >/dev/null 2>&1
+mkfs.ext4 -F -L arch-root -b 1024 -I 128 -O "^has_journal" $dev >/dev/null 2>&1
 
 echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
-echo Install debian to ${mount_dir} ...
-/usr/sbin/debootstrap --no-check-gpg --components=main,contrib,non-free --exclude=unattended-upgrades --include=bash-completion,iproute2,openssh-server sid /mnt/debian http://ftp.us.debian.org/debian
+echo Install arch to ${mount_dir} ...
+cat << "EOF" > /etc/pacman.d/mirrorlist
+Server = http://mirrors.kernel.org/archlinux/$repo/os/$arch
+EOF
+/usr/bin/pacstrap -i --cachedir=/tmp /mnt/arch base linux vim tmux bash-completion openssh grub --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -135,8 +144,6 @@ mount -o bind /sys ${mount_dir}/sys
 
 echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
-echo tcp_bbr >> ${mount_dir}/etc/modules
-sed -i '/src/d' ${mount_dir}/etc/apt/sources.list
 
 mask2cidr ()
 {
@@ -168,41 +175,64 @@ EOF
 fi
 
 cat << EOF > ${mount_dir}/etc/fstab
-LABEL=debian-root /        ext4  defaults,noatime                            0 0
-tmpfs             /tmp     tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
-tmpfs             /var/log tmpfs defaults,noatime                            0 0
+LABEL=arch-root   /                    ext4  defaults,noatime                            0 0
+tmpfs             /tmp                 tmpfs mode=1777,strictatime,nosuid,nodev,size=90% 0 0
+tmpfs             /var/log             tmpfs defaults,noatime                            0 0
+tmpfs             /root/.cache         tmpfs defaults,noatime                            0 0
+tmpfs             /var/cache/pacman    tmpfs defaults,noatime                            0 0
+tmpfs             /var/lib/pacman/sync tmpfs defaults,noatime                            0 0
 EOF
 
 mkdir -p ${mount_dir}/root/.ssh
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDyuzRtZAyeU3VGDKsGk52rd7b/rJ/EnT8Ce2hwWOZWp" >> ${mount_dir}/root/.ssh/authorized_keys
 chmod 600 ${mount_dir}/root/.ssh/authorized_keys
 
-mkdir -p ${mount_dir}/etc/apt/apt.conf.d
-cat << EOF > ${mount_dir}/etc/apt/apt.conf.d/99-freedisk
-APT::Authentication "0";
-APT::Get::AllowUnauthenticated "1";
-Dir::Cache "/dev/shm";
-Dir::State::lists "/dev/shm";
-Dir::Log "/dev/shm";
-DPkg::Post-Invoke {"/bin/rm -f /dev/shm/archives/*.deb || true";};
-EOF
-
-mkdir -p ${mount_dir}/etc/dpkg/dpkg.cfg.d
-cat << EOF > ${mount_dir}/etc/dpkg/dpkg.cfg.d/99-nodoc
-path-exclude /usr/share/doc/*
-path-exclude /usr/share/man/*
-path-exclude /usr/share/groff/*
-path-exclude /usr/share/info/*
-path-exclude /usr/share/lintian/*
-path-exclude /usr/share/linda/*
-path-exclude /usr/share/locale/*
-path-include /usr/share/locale/en*
-EOF
-
 mkdir -p ${mount_dir}/etc/systemd/journald.conf.d
 cat << EOF > ${mount_dir}/etc/systemd/journald.conf.d/storage.conf
 [Journal]
 Storage=volatile
+EOF
+
+mkdir -p ${mount_dir}/etc/systemd/system-environment-generators
+cat << EOF > ${mount_dir}/etc/systemd/system-environment-generators/20-python.sh
+#!/bin/sh
+
+echo 'PYTHONDONTWRITEBYTECODE=1'
+EOF
+chmod +x ${mount_dir}/etc/systemd/system-environment-generators/20-python.sh
+
+mkdir -p ${mount_dir}/etc/systemd/system-generators
+cat << "EOF" > ${mount_dir}/etc/systemd/system-generators/masked-unit-generator
+#!/bin/sh
+
+set -eu
+
+gendir="$1"
+
+while IFS= read -r line
+do
+  if [ -n "$line" ]; then
+    ln -sf "/dev/null" "$gendir/$line"
+  fi
+done < /etc/systemd/system/masked.units
+
+exit 0
+EOF
+chmod +x ${mount_dir}/etc/systemd/system-generators/masked-unit-generator
+
+cat << EOF > ${mount_dir}/etc/systemd/system/masked.units
+lvm2-lvmetad.service
+lvm2-monitor.service
+systemd-journal-flush.service
+systemd-update-utmp.service
+
+lvm2-lvmetad.socket
+
+man-db.timer
+shadow.timer
+
+dev-hugepages.mount
+sys-kernel-debug.mount
 EOF
 
 sed -i 's/#\?\(PerminRootLogin\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_config
@@ -217,25 +247,28 @@ ListenStream=
 ListenStream=127.0.0.1:22
 EOF
 
-mkdir -p ${mount_dir}/etc/systemd/system-environment-generators
-cat << EOF > ${mount_dir}/etc/systemd/system-environment-generators/20-python.sh
-#!/bin/sh
-
-echo 'PYTHONDONTWRITEBYTECODE=1'
-EOF
-chmod +x ${mount_dir}/etc/systemd/system-environment-generators/20-python.sh
-
-cat << EOF > ${mount_dir}/etc/pip.conf
-[global]
-download-cache=/tmp
-cache-dir=/tmp
-EOF
-
 cat << EOF >> ${mount_dir}/root/.bashrc
 
 export HISTSIZE=1000
 export LESSHISTFILE=/dev/null
 unset HISTFILE
+
+tmux_init()
+{
+    tmux new-session -d -s "arch" -n "root"
+    tmux new-window -n "tmp1" -t "arch" -c /tmp
+    tmux new-window -n "tmp2" -t "arch" -c /tmp
+    tmux new-window -n "tmp3" -t "arch" -c /tmp
+    tmux new-window -n "tmp4" -t "arch" -c /tmp
+    tmux new-window -n "tmp5" -t "arch" -c /tmp
+    tmux new-window -n "tmp6" -t "arch" -c /tmp
+    tmux select-window -t "root"
+    tmux attach-session -d
+}
+
+if which tmux 2>&1 >/dev/null; then
+   [ -z "$TMUX" ] && (tmux attach-session -d -t "arch" || tmux_init)
+fi
 EOF
 
 cat << EOF > ${mount_dir}/etc/sysctl.d/10-tcp_bbr.conf
@@ -255,26 +288,22 @@ cat << EOF > ${mount_dir}/etc/default/grub
 GRUB_DEFAULT=0
 GRUB_HIDDEN_TIMEOUT_QUIET=false
 GRUB_TIMEOUT=3
-GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
+GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo ArchLinux`
 GRUB_CMDLINE_LINUX_DEFAULT="quiet ipv6.disable=1 module_blacklist=ipv6,nf_defrag_ipv6"
-GRUB_CMDLINE_LINUX="acpi_osi=Linux"
+GRUB_CMDLINE_LINUX=""
 EOF
 
 chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-mkdir /tmp/apt
-DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt update
-DEBIAN_FRONTEND=noninteractive apt -o Dir::Cache=/tmp/apt -o Dir::State::lists=/tmp/apt install -y -qq linux-image-cloud-amd64 grub2
 grub-install --force $dev
 update-grub
 
-systemctl enable systemd-networkd ssh.socket v2ray
+systemctl enable systemd-networkd systemd-resolved systemd-timesyncd ssh.socket v2ray
 systemctl disable ssh.service
-systemctl -f mask apt-daily.timer apt-daily-upgrade.timer fstrim.timer motd-news.timer apparmor.service cron.service e2scrub_reap.service networking.service rsyslog.service syslog.service e2scrub_all.timer logrotate.timer
 sleep 2
-rm -rf /tmp/apt /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /var/cache/apt/*
+rm -rf /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /root/.cache/* /var/cache/pacman/* /var/lib/pacman/sync/*
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type d -name __pycache__ -exec rm -rf {} \; -prune
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type f -name *.py[co] -exec rm -rf {} \;
 find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en' -exec rm -rf {} \; -prune
@@ -287,6 +316,6 @@ umount ${mount_dir}
 
 echo Done.
 echo ===================================================
-echo "Root password: $rootpwd"
-echo "V2ray UUID   : $UUID"
+echo "Root  PASS: $rootpwd"
+echo "V2Ray UUID: $UUID"
 echo ===================================================
