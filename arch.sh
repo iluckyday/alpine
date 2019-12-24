@@ -291,7 +291,7 @@ ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 pacman -Sy linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 grub-install --force $dev
-update-grub
+grub-mkconfig -o /boot/grub/grub.cfg
 
 systemctl enable systemd-networkd systemd-resolved systemd-timesyncd sshd v2ray
 sleep 2
