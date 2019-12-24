@@ -124,7 +124,7 @@ echo Config system ...
 mount /dev ${mount_dir}/dev --bind
 mount -o remount,ro,bind ${mount_dir}/dev
 
-mount -t proc none ${mount_dir}/proc
+mount -o bind /proc ${mount_dir}/proc
 mount -o bind /sys ${mount_dir}/sys
 
 echo "$use_hostname" > ${mount_dir}/etc/hostname
