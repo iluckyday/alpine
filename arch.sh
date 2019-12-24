@@ -221,17 +221,11 @@ dev-hugepages.mount
 sys-kernel-debug.mount
 EOF
 
+sed -i 's/#\?\(ListenAddress 0.0.0.0\s*\).*$/ListenAddress 127.0.0.1/' ${mount_dir}/etc/ssh/sshd_config
 sed -i 's/#\?\(PerminRootLogin\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_config
 sed -i 's/#\?\(PubkeyAuthentication\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_config
 sed -i 's/#\?\(PermitEmptyPasswords\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
 sed -i 's/#\?\(PasswordAuthentication\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
-
-mkdir -p ${mount_dir}/etc/systemd/system/ssh.socket.d
-cat << EOF > ${mount_dir}/etc/systemd/system/ssh.socket.d/port.conf
-[Socket]
-ListenStream=
-ListenStream=127.0.0.1:22
-EOF
 
 cat << EOF >> ${mount_dir}/root/.bashrc
 
@@ -296,11 +290,10 @@ echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 pacman -Sy linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
-#grub-install --force $dev
-#update-grub
+grub-install --force $dev
+update-grub
 
-systemctl enable systemd-networkd systemd-resolved systemd-timesyncd ssh.socket v2ray
-systemctl disable ssh.service
+systemctl enable systemd-networkd systemd-resolved systemd-timesyncd sshd v2ray
 sleep 2
 rm -rf /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /root/.cache/* /var/cache/pacman/* /var/lib/pacman/sync/*
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type d -name __pycache__ -exec rm -rf {} \; -prune
