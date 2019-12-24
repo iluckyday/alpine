@@ -126,6 +126,7 @@ mount -o remount,ro,bind ${mount_dir}/dev
 
 mount -o bind /proc ${mount_dir}/proc
 mount -o bind /sys ${mount_dir}/sys
+mount -o bind /tmp ${mount_dir}/tmp
 
 echo "$use_hostname" > ${mount_dir}/etc/hostname
 echo -e "nameserver 8.8.8.8\nnameserver 8.8.4.4" > ${mount_dir}/etc/resolv.conf
@@ -289,12 +290,12 @@ default_image="/boot/initramfs-linux.img"
 COMPRESSION="xz"
 EOF
 
-/usr/bin/pacstrap -i -c /mnt/arch linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
-
 chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+pacman -Sy linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+
 #grub-install --force $dev
 #update-grub
 
