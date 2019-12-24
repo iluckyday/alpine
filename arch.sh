@@ -32,7 +32,7 @@ auto_hostname="arch-""${live_ip//./-}"
 [[ -z "$set_gateway" ]] && gw_msg="DHCP" || gw_msg=$set_gateway
 
 echo ===========================
-echo Install Debian Sid to:
+echo Install Arch Linux to:
 echo "disk: ""$dev ""$devsize"
 echo "hostname: ""$use_hostname"
 echo "address: ""$ip_msg"
@@ -68,7 +68,7 @@ echo Install arch to ${mount_dir} ...
 cat << "EOF" > /etc/pacman.d/mirrorlist
 Server = http://mirror.rackspace.com/archlinux/$repo/os/$arch
 EOF
-/usr/bin/pacstrap -i -c /mnt/arch base linux vim tmux bash-completion openssh grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+/usr/bin/pacstrap -i -c /mnt/arch base --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 echo Install V2ray ...
 VER=$(curl -skL https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -278,12 +278,25 @@ GRUB_CMDLINE_LINUX_DEFAULT="quiet ipv6.disable=1 module_blacklist=ipv6,nf_defrag
 GRUB_CMDLINE_LINUX=""
 EOF
 
+mkdir -p ${mount_dir}/etc/mkinitcpio.d
+cat << EOF > ${mount_dir}/etc/mkinitcpio.d/linux.preset
+ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="/boot/vmlinuz-linux"
+
+PRESETS=('default')
+default_image="/boot/initramfs-linux.img"
+
+COMPRESSION="xz"
+EOF
+
+/usr/bin/pacstrap -i -c /mnt/arch linux grub vim tmux bash-completion openssh --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+
 chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-grub-install --force $dev
-update-grub
+#grub-install --force $dev
+#update-grub
 
 systemctl enable systemd-networkd systemd-resolved systemd-timesyncd ssh.socket v2ray
 systemctl disable ssh.service
@@ -291,11 +304,11 @@ sleep 2
 rm -rf /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /root/.cache/* /var/cache/pacman/* /var/lib/pacman/sync/*
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type d -name __pycache__ -exec rm -rf {} \; -prune
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type f -name *.py[co] -exec rm -rf {} \;
-find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en' -exec rm -rf {} \; -prune
-find /usr/share/zoneinfo -mindepth 1 -maxdepth 2 ! -name 'UTC' -a ! -name 'UCT' -a ! -name 'PRC' -a ! -name 'Asia' -a ! -name '*Shanghai' -exec rm -rf {} \; -prune
+find /usr/share/locale -maxdepth 1 ! -name 'en' -exec rm -rf {} \; -prune
+find /usr/share/zoneinfo ! -name 'UTC' -a ! -name 'UCT' -a ! -name 'PRC' -a ! -name 'Asia' -a ! -name '*Shanghai' -exec rm -rf {} \; -prune
 "
 
-umount ${mount_dir}/dev ${mount_dir}/proc ${mount_dir}/sys/fs/fuse/connections ${mount_dir}/sys
+umount ${mount_dir}/{dev,proc,sys}
 sleep 1
 umount ${mount_dir}
 
