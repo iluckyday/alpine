@@ -12,19 +12,6 @@ then
 	exit 2
 fi
 
-command_exists()
-{
-	command -v "$1" >/dev/null 2>&1
-}
-
-for cmd in debootstrap unzip
-do
-	if ! command_exists $cmd; then
-		echo Your system does not have $cmd, install it first, please wait.
-		apt update >/dev/null 2>&1 && apt install -y $cmd >/dev/null 2>&1
-	fi
-done
-
 mount_dir=/mnt/arch
 
 dev="$1"
@@ -79,9 +66,9 @@ mount $dev ${mount_dir}
 
 echo Install arch to ${mount_dir} ...
 cat << "EOF" > /etc/pacman.d/mirrorlist
-Server = http://mirrors.kernel.org/archlinux/$repo/os/$arch
+Server = http://mirror.rackspace.com/archlinux/$repo/os/$arch
 EOF
-/usr/bin/pacstrap -i --cachedir=/tmp /mnt/arch base linux vim tmux bash-completion openssh grub --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+/usr/bin/pacstrap -i --cachedir /tmp /mnt/arch base linux vim tmux bash-completion openssh grub --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
