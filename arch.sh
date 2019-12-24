@@ -68,7 +68,7 @@ echo Install arch to ${mount_dir} ...
 cat << "EOF" > /etc/pacman.d/mirrorlist
 Server = http://mirror.rackspace.com/archlinux/$repo/os/$arch
 EOF
-/usr/bin/pacstrap -i -c /mnt/arch base --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+/usr/bin/pacstrap -i -c /mnt/arch base vim tmux bash-completion openssh --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 echo Install V2ray ...
 VER=$(curl -skL https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
@@ -289,7 +289,7 @@ default_image="/boot/initramfs-linux.img"
 COMPRESSION="xz"
 EOF
 
-/usr/bin/pacstrap -i -c /mnt/arch linux grub vim tmux bash-completion openssh --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+/usr/bin/pacstrap -i -c /mnt/arch linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
