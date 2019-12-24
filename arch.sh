@@ -91,9 +91,6 @@ cat << EOF > ${mount_dir}/etc/v2ray/config.json
         "id": "$UUID",
         "alterId": 100
       }]
-    },
-    "streamSettings": {
-      "network": "ws"
     }
   }],
   "outbounds": [{
@@ -173,10 +170,63 @@ mkdir -p ${mount_dir}/root/.ssh
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDyuzRtZAyeU3VGDKsGk52rd7b/rJ/EnT8Ce2hwWOZWp" >> ${mount_dir}/root/.ssh/authorized_keys
 chmod 600 ${mount_dir}/root/.ssh/authorized_keys
 
+cp ${mount_dir}/etc/skel/.bash_profile ${mount_dir}/root
+
+cat << EOF > ${mount_dir}/root/.vimrc
+syntax on
+filetype on
+set nu
+set history=0
+set autoread
+set backupdir=/dev/shm//
+set directory=/dev/shm//
+set undodir=/dev/shm//
+set nobackup
+set nowritebackup
+set cursorline
+highlight CursorLine   cterm=NONE ctermbg=darkred ctermfg=white guibg=darkred guifg=white
+highlight CursorColumn cterm=NONE ctermbg=darkred ctermfg=white guibg=darkred guifg=white
+set showmatch
+set ignorecase
+set hlsearch
+set incsearch
+set tabstop=4
+set softtabstop=4
+set shiftwidth=4
+set nowrap
+set wildmenu
+set wildmode=longest:full,full
+let skip_defaults_vim=1
+set viminfo=
+set encoding=utf8
+set fileencodings=utf8,gb2312,gb18030,ucs-bom,latin1
+
+:map <F10> :set invpaste<CR>
+EOF
+
+cat << "EOF" > ${mount_dir}/root/.tmux.conf
+set-option -g mouse on
+
+set -g default-terminal screen
+set -g update-environment 'DISPLAY SSH_ASKPASS SSH_AGENT_PID SSH_CONNECTION WINDOWID XAUTHORITY TERM'
+if "[[ ${TERM} =~ 256color || ${TERM} == fbterm ]]" 'set -g default-terminal screen-256color'
+
+set -g terminal-overrides 'xterm*:smcup@:rmcup@'
+set -g terminal-overrides 'xterm*disallowedWindowOps: 20,21,SetXprop'
+
+setw -g mode-keys vi
+EOF
+
 mkdir -p ${mount_dir}/etc/systemd/journald.conf.d
 cat << EOF > ${mount_dir}/etc/systemd/journald.conf.d/storage.conf
 [Journal]
 Storage=volatile
+EOF
+
+mkdir -p ${mount_dir}/etc/systemd/resolved.conf.d
+cat << EOF > ${mount_dir}/etc/systemd/resolved.conf.d/llmnr.conf
+[Resolve]
+LLMNR=no
 EOF
 
 mkdir -p ${mount_dir}/etc/systemd/system-environment-generators
@@ -227,7 +277,7 @@ sed -i 's/#\?\(PubkeyAuthentication\s*\).*$/\1 yes/' ${mount_dir}/etc/ssh/sshd_c
 sed -i 's/#\?\(PermitEmptyPasswords\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
 sed -i 's/#\?\(PasswordAuthentication\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
 
-cat << EOF >> ${mount_dir}/root/.bashrc
+cat << "EOF" >> ${mount_dir}/root/.bashrc
 
 export HISTSIZE=1000
 export LESSHISTFILE=/dev/null
@@ -246,7 +296,7 @@ tmux_init()
     tmux attach-session -d
 }
 
-if which tmux 2>&1 >/dev/null; then
+if whereis -b tmux 2>&1 >/dev/null; then
    [ -z "$TMUX" ] && (tmux attach-session -d -t "arch" || tmux_init)
 fi
 EOF
@@ -288,6 +338,9 @@ chroot ${mount_dir} /bin/bash -c "
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 echo root:$rootpwd | chpasswd
 ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+echo en_US.UTF-8 UTF-8 > /etc/locale.gen
+locale-gen
+echo LANG=en_US.UTF-8 > /etc/locale.conf
 pacman -Sy linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 grub-install --force $dev
@@ -299,7 +352,6 @@ rm -rf /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /root/.cac
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type d -name __pycache__ -exec rm -rf {} \; -prune
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type f -name *.py[co] -exec rm -rf {} \;
 find /usr/share/locale -maxdepth 1 ! -name 'en' -exec rm -rf {} \; -prune
-find /usr/share/zoneinfo ! -name 'UTC' -a ! -name 'UCT' -a ! -name 'PRC' -a ! -name 'Asia' -a ! -name '*Shanghai' -exec rm -rf {} \; -prune
 "
 
 umount ${mount_dir}/{dev,proc,sys,tmp,}
