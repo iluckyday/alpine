@@ -68,14 +68,13 @@ echo Install arch to ${mount_dir} ...
 cat << "EOF" > /etc/pacman.d/mirrorlist
 Server = http://mirror.rackspace.com/archlinux/$repo/os/$arch
 EOF
-/usr/bin/pacstrap -i -c /mnt/arch base linux vim tmux bash-completion openssh grub --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+/usr/bin/pacstrap -i -c /mnt/arch base linux vim tmux bash-completion openssh grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 echo Install V2ray ...
-VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
+VER=$(curl -skL https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
 URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-32.zip
-wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
-unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
-chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
+curl -skL $URL | /usr/lib/initcpio/busybox unzip - -q -d ${mount_dir}/usr/local/sbin v2ray v2ctl
+chmod +x ${mount_dir}/usr/local/sbin/{v2ray,v2ctl}
 
 UUID=$(cat /proc/sys/kernel/random/uuid)
 mkdir ${mount_dir}/etc/v2ray
@@ -114,8 +113,7 @@ After=network.target
 DynamicUser=yes
 ProtectHome=yes
 NoNewPrivileges=yes
-ExecStartPre=/usr/sbin/v2ray -config /etc/v2ray/config.json -test
-ExecStart=/usr/sbin/v2ray -config /etc/v2ray/config.json
+ExecStart=/usr/local/sbin/v2ray -config /etc/v2ray/config.json
 Restart=on-failure
 
 [Install]
