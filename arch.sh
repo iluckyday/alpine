@@ -309,9 +309,8 @@ find /usr/share/locale -maxdepth 1 ! -name 'en' -exec rm -rf {} \; -prune
 find /usr/share/zoneinfo ! -name 'UTC' -a ! -name 'UCT' -a ! -name 'PRC' -a ! -name 'Asia' -a ! -name '*Shanghai' -exec rm -rf {} \; -prune
 "
 
-umount ${mount_dir}/{dev,proc,sys}
+umount ${mount_dir}/{dev,proc,sys,tmp,}
 sleep 1
-umount ${mount_dir}
 
 echo Done.
 echo ===================================================
