@@ -68,7 +68,7 @@ echo Install arch to ${mount_dir} ...
 cat << "EOF" > /etc/pacman.d/mirrorlist
 Server = http://mirror.rackspace.com/archlinux/$repo/os/$arch
 EOF
-/usr/bin/pacstrap -i -c /mnt/arch base linux vim tmux bash-completion openssh grub --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
+/usr/bin/pacstrap -i -c /mnt/arch base linux vim tmux bash-completion openssh grub --cachedir /tmp --ignore dhcpcd --ignore logrotate --ignore nano --ignore netctl --ignore usbutils --ignore vi --ignore s-nail
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
