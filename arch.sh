@@ -237,6 +237,10 @@ echo 'PYTHONDONTWRITEBYTECODE=1'
 EOF
 chmod +x ${mount_dir}/etc/systemd/system-environment-generators/20-python.sh
 
+cat << EOF > ${mount_dir}/etc/profile.d/python.sh
+export PYTHONDONTWRITEBYTECODE=1
+EOF
+
 mkdir -p ${mount_dir}/etc/systemd/system-generators
 cat << "EOF" > ${mount_dir}/etc/systemd/system-generators/masked-unit-generator
 #!/bin/sh
