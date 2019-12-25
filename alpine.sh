@@ -72,11 +72,11 @@ echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
 echo Download apk-tools-static ...
-ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-static | awk -F'>' '/Flagged:/ {sub(/<\/a/,"",$2);print$2}')
-wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86/apk-tools-static-$ver.apk | tar -xz -C /tmp
+ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86_64/apk-tools-static | awk -F'>' '/Flagged:/ {sub(/<\/a/,"",$2);print$2}')
+wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static --update --no-cache --arch x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
+/tmp/sbin/apk.static --update --no-cache -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear
 
 echo Config system ...
 mount /dev ${mount_dir}/dev --bind

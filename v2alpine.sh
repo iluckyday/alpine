@@ -80,15 +80,15 @@ echo Mount $dev to ${mount_dir} ...
 mount $dev ${mount_dir}
 
 echo Download apk-tools-static ...
-ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86/apk-tools-static | awk -F'>' '/Flagged:/ {sub(/<\/a/,"",$2);print$2}')
-wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86/apk-tools-static-$ver.apk | tar -xz -C /tmp
+ver=$(wget -qO- https://pkgs.alpinelinux.org/package/edge/main/x86_64/apk-tools-static | awk -F'>' '/Flagged:/ {sub(/<\/a/,"",$2);print$2}')
+wget -qO- http://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-$ver.apk | tar -xz -C /tmp
 
 echo Install alpine-base to ${mount_dir} ...
-/tmp/sbin/apk.static --update --no-cache --arch x86 -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -X http://dl-cdn.alpinelinux.org/alpine/edge/community -X http://dl-cdn.alpinelinux.org/alpine/edge/testing -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear caddy
+/tmp/sbin/apk.static --update --no-cache -q -X http://dl-cdn.alpinelinux.org/alpine/edge/main -X http://dl-cdn.alpinelinux.org/alpine/edge/community -X http://dl-cdn.alpinelinux.org/alpine/edge/testing -U --allow-untrusted --root ${mount_dir} --initdb add alpine-base dropbear caddy
 
 echo Install V2ray ...
 VER=$(wget --no-check-certificate -q -O- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
-URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-32.zip
+URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-64.zip
 wget --no-check-certificate -q -O /tmp/v2ray.zip $URL
 unzip -q /tmp/v2ray.zip -d ${mount_dir}/usr/sbin v2ray v2ctl
 chmod +x ${mount_dir}/usr/sbin/{v2ray,v2ctl}
@@ -234,7 +234,7 @@ EOF
 cat << EOF > ${mount_dir}/etc/update-extlinux.conf
 overwrite=1
 vesa_menu=0
-default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6,psmouse,mousedev,floppy,hid_generic,usbhid,hid,sr_mod,cdrom,uhci_hcd,ehci_pci,ehci_hcd,usbcore,usb_common,drm_kms_helper,syscopyarea,sysimgblt,fs_sys_fops,drm,drm_panel_orientation_quirks,firmware_class,cfbfillrect,cfbimgblt,cfbcopyarea,fb,fbdev,loop"
+default_kernel_opts="ipv6.disable=1 quiet rootfstype=ext4 module_blacklist=ipv6,nf_defrag_ipv6"
 modules=ext4
 root=LABEL=alpine-root
 verbose=0
@@ -256,7 +256,7 @@ extlinux -i /boot
 
 rc-update add devfs sysinit
 rc-update add mdev sysinit
-rc-update add hwdrivers sysinit  # need for e1000 driver load
+rc-update add hwdrivers sysinit
 rc-update add modules boot
 rc-update add sysctl boot
 rc-update add hostname boot
