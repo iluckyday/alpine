@@ -1,7 +1,24 @@
 #!/bin/bash -e
 
+display_usage() { 
+	echo "This script must be run with super-user privileges." 
+	echo -e "Usage:\n\ncurl -skLO https://raw.githubusercontent.com/iluckyday/vps/master/arch.sh && chmod +x arch.sh\n./arch.sh </dev/sda|/dev/vda|...> [hostname] [ipaddress1] [netmask] [gateway] [ipaddress2] [ipaddress3] [ipaddress4]" 
+}
+
+if [  $# -le 0 ]
+then
+	display_usage
+	exit 1
+fi
+
+if [[ ( $# == "--help") ||  $# == "-h" ]]
+then
+	display_usage
+	exit 0
+fi
+
 if [[ $EUID -ne 0 ]]; then
-	echo "This script must be run as root" 1>&2
+	echo "This script must be run as root!"
 	exit 1
 fi
 
