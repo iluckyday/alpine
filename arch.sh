@@ -404,7 +404,7 @@ pacman -Sy linux grub --noconfirm --cachedir /tmp --ignore dhcpcd --ignore logro
 grub-install --force $dev
 grub-mkconfig -o /boot/grub/grub.cfg
 
-systemctl enable systemd-networkd systemd-resolved systemd-timesyncd sshd v2ray
+systemctl enable systemd-networkd systemd-timesyncd sshd v2ray
 sleep 2
 rm -rf /var/log/* /usr/share/doc/* /usr/share/man/* /tmp/* /var/tmp/* /root/.cache/* /var/cache/pacman/* /var/lib/pacman/sync/*
 find /usr/lib/python* /usr/local/lib/python* /usr/share/python* -type d -name __pycache__ -exec rm -rf {} \; -prune
