@@ -293,6 +293,49 @@ sed -i 's/#\?\(PermitEmptyPasswords\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_co
 sed -i 's/#\?\(PasswordAuthentication\s*\).*$/\1 no/' ${mount_dir}/etc/ssh/sshd_config
 
 cat << "EOF" >> ${mount_dir}/root/.bashrc
+alias path='echo -e ${PATH//:/\\n}'
+alias now='date +"%T"'
+alias nowtime=now
+alias nowdate='date +"%d-%m-%Y"'
+alias header='curl -I'
+alias headerc='curl -I --compress'
+alias rm='rm -I --preserve-root'
+alias mv='mv -i'
+alias cp='cp -i'
+alias ln='ln -i'
+alias chown='chown --preserve-root'
+alias chmod='chmod --preserve-root'
+alias chgrp='chgrp --preserve-root'
+alias psmem='ps auxf | sort -nr -k 4'
+alias psmem10='ps auxf | sort -nr -k 4 | head -10'
+alias pscpu='ps auxf | sort -nr -k 3'
+alias pscpu10='ps auxf | sort -nr -k 3 | head -10'
+alias ll="ls -lahAF --color"
+alias ls="ls --color"
+alias d="df -Th --total"
+alias f="free -mth"
+alias dus="du -ach | sort -h"
+alias sst="ss -antp"
+alias sstg="ss -antp | grep"
+alias ssu="ss -anup"
+alias ssug="ss -anup | grep"
+alias grep="grep --color=auto"
+alias fgrep="fgrep --color=auto"
+alias egrep="egrep --color=auto"
+alias up="cd .."
+alias 2up="cd ../.."
+alias 3up="cd ../../.."
+alias 4up="cd ../../../.."
+alias cds="cd /etc/systemd/system"
+alias cdn="cd /etc/systemd/network"
+alias cdt="cd /tmp"
+alias psg="ps -ef | grep -v grep | grep -e PPID -e"
+alias psv="ps -aux | grep -v '\['"
+alias path='echo -e ${PATH//:/\\n}'
+alias now='date +"%T"'
+alias nowtime=now
+alias nowdate='date +"%d-%m-%Y"'
+alias vmdf="awk 'BEGIN {print \"CPU%\t MEM%\t MEM\t PROGRAM\"}' && ps aux | awk '{mem[\$11]+=int(\$6/1024)};{cpuper[\$11]+=\$3};{memper[\$11]+=\$4}; END {for (i in mem) {print cpuper[i]\"%\",\"\t\",memper[i]\"%\",\"\t\",mem[i]\"MB\",\"\t\",i}}' | sort -k3nr | head -n 10"
 
 export HISTSIZE=1000
 export LESSHISTFILE=/dev/null
