@@ -19,17 +19,24 @@ dev="$1"
 devsize=$(fdisk -l | grep $dev | awk '{sub(/,/,"",$4);print $3$4;exit}')
 
 set_hostname="$2"
-set_address="$3"
+set_address1="$3"
 set_netmask="$4"
 set_gateway="$5"
-rootpwd=$(openssl rand -base64 27)
+set_address2="$6"
+set_address3="$7"
+set_address4="$8"
+set_address5="$9"
+
+set_address="${set_address1} ${set_address2} ${set_address3} ${set_address4} ${set_address5}"
 
 live_ip=$(ip route get 8.8.8.8 | awk '{print $NF; exit}')
 auto_hostname="arch-""${live_ip//./-}"
 [[ -n "$set_hostname" ]] && use_hostname=$set_hostname || use_hostname=$auto_hostname
-[[ -z "$set_address" ]] && ip_msg="DHCP" || ip_msg=$set_address
+[[ "$set_address" = "    " ]] && ip_msg="DHCP" || ip_msg=$set_address
 [[ -z "$set_netmask" ]] && nm_msg="DHCP" || nm_msg=$set_netmask
 [[ -z "$set_gateway" ]] && gw_msg="DHCP" || gw_msg=$set_gateway
+
+rootpwd=$(openssl rand -base64 27)
 
 echo ===========================
 echo Install Arch Linux to:
@@ -144,9 +151,13 @@ then
 Name=en*
 
 [Network]
-Address=$set_address/$set_cidr
 Gateway=$set_gateway
 EOF
+        for addr in $set_address
+        do
+            addr_str+="Address=$addr/$set_cidr\n"
+        done
+        echo -e $addr_str  >> ${mount_dir}/etc/systemd/network/20-wired.network
 else
 	cat << EOF > ${mount_dir}/etc/systemd/network/20-wired.network
 [Match]
