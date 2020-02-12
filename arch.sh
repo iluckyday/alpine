@@ -394,7 +394,7 @@ GRUB_DEFAULT=0
 GRUB_HIDDEN_TIMEOUT_QUIET=false
 GRUB_TIMEOUT=3
 GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo ArchLinux`
-GRUB_CMDLINE_LINUX_DEFAULT="quiet ipv6.disable=1 module_blacklist=ipv6,nf_defrag_ipv6"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet ipv6.disable=1"
 GRUB_CMDLINE_LINUX=""
 EOF
 
