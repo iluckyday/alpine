@@ -3,6 +3,8 @@
 # do first
 #
 # echo -e "nameserver 2001:67c:2b0::4\nnameserver 2001:67c:27e4::64" > /etc/resolv.conf
+#
+# wget -qO /run/euserv.sh https://raw.githubusercontent.com/iluckyday/vps/master/euserv.sh && chmod +x /run/euserv.sh && /run/euserv.sh <domain> <mail> [UUID]
 
 if [[ $EUID -ne 0 ]]; then
 	echo "This script must be run as root"
