@@ -21,7 +21,7 @@ domain=$1
 mail=$2
 uuid=$3
 
-echo Install V2ray ...
+echo install v2ray ...
 VER=$(wget --no-check-certificate -qO- https://api.github.com/repos/v2ray/v2ray-core/releases/latest | awk -F'"' '/tag_name/ {print $4}')
 URL=https://github.com/v2ray/v2ray-core/releases/download/$VER/v2ray-linux-64.zip
 wget --no-check-certificate -qO- $URL | busybox unzip - -o -d /usr/sbin v2ray v2ctl
@@ -69,7 +69,8 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-caddyver=$(wget -qO- https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=caddy-bin | awk -F'=' '/^pkgver/ {print $2}')
+echo install caddy ...
+pkgver=$(wget -qO- https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=caddy-bin | awk -F'=' '/^pkgver/ {print $2}')
 caddyurl="https://github.com/mholt/caddy/releases/download/v${pkgver//_/-}/caddy_v${pkgver//_/-}_linux_amd64.tar.gz"
 wget -qO- "$caddyurl" | tar -xz -C /usr/sbin caddy
 chmod +x /usr/sbin/caddy
