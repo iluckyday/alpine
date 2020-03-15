@@ -122,7 +122,7 @@ EOF
 systemctl enable v2ray caddy
 systemctl mask cron.service rsyslog.service apt-daily-upgrade.timer apt-daily.timer logrotate.timer
 
-sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 127.0.0.1/g' /etc/ssh/sshd_config
+#sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 127.0.0.1/g' /etc/ssh/sshd_config
 rm -f /root/.bash_history
 
 echo done, reboot.
