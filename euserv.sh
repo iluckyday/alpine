@@ -81,15 +81,15 @@ Description=Caddy HTTP/2 web server
 After=network.target
 
 [Service]
+DynamicUser=yes
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 ExecStart=/usr/sbin/caddy -log stdout -agree -conf /etc/caddy.conf
 ExecReload=/usr/bin/kill -USR1 $MAINPID
-LimitNOFILE=1048576
-LimitNPROC=64
 PrivateTmp=true
 PrivateDevices=true
 ProtectHome=true
 ProtectSystem=strict
-AmbientCapabilities=CAP_NET_BIND_SERVICE
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
@@ -105,19 +105,11 @@ $domain {
 }
 EOF
 
-echo 'export HISTSIZE=1000 LESSHISTFILE=/dev/null HISTFILE=/dev/null' >> .bashrc
+echo 'export HISTSIZE=1000 LESSHISTFILE=/dev/null HISTFILE=/dev/null' >> /root/.bashrc
 echo -e "nameserver 2001:67c:2b0::4\nnameserver 2001:67c:27e4::64" > /etc/resolv.conf
 mkdir -p /root/.ssh
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDyuzRtZAyeU3VGDKsGk52rd7b/rJ/EnT8Ce2hwWOZWp" > /root/.ssh/authorized_keys
 chmod 600 /root/.ssh/authorized_keys
-
-cat << EOF > /etc/sysctl.d/20-security.conf
-net.ipv6.tcp_syncookies = 1
-net.ipv6.tcp_synack_retries = 5
-net.ipv6.tcp_syncookies = 1
-net.ipv6.icmp_ignore_bogus_error_responses=1
-net.ipv6.icmp_echo_ignore_all = 1
-EOF
 
 systemctl enable v2ray caddy
 systemctl mask cron.service rsyslog.service apt-daily-upgrade.timer apt-daily.timer logrotate.timer
@@ -125,6 +117,6 @@ systemctl mask cron.service rsyslog.service apt-daily-upgrade.timer apt-daily.ti
 #sed -i 's/#ListenAddress 0.0.0.0/ListenAddress 127.0.0.1/g' /etc/ssh/sshd_config
 rm -f /root/.bash_history
 
-echo done, reboot.
+echo reboot ...
 sleep 2
 reboot
