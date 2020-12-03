@@ -352,6 +352,7 @@ alias path='echo -e ${PATH//:/\\n}'
 alias now='date +"%T"'
 alias nowtime=now
 alias nowdate='date +"%d-%m-%Y"'
+alias td="tmux detach"
 alias vmdf="awk 'BEGIN {print \"CPU%\t MEM%\t MEM\t PROGRAM\"}' && ps aux | awk '{mem[\$11]+=int(\$6/1024)};{cpuper[\$11]+=\$3};{memper[\$11]+=\$4}; END {for (i in mem) {print cpuper[i]\"%\",\"\t\",memper[i]\"%\",\"\t\",mem[i]\"MB\",\"\t\",i}}' | sort -k3nr | head -n 10"
 
 export HISTSIZE=1000
